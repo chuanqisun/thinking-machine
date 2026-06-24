@@ -16,7 +16,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 renderer.domElement.style.transformOrigin = "0 0";
 
-const N = 16,
+const N = 12,
   FLAP_W = 1.3,
   SPEED = 8;
 const cellH = FLAP_W * (100 / 70),
