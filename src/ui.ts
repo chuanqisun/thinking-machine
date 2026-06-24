@@ -551,8 +551,8 @@ function setupEventListeners(): void {
 
           console.log("AI Response:", response);
 
-          if (setDisplayStringCallback && response.display) {
-            setDisplayStringCallback(response.display);
+          if (setDisplayStringCallback && response.displayResponse) {
+            setDisplayStringCallback(response.displayResponse);
           }
         } catch (error) {
           console.error("Error getting AI response:", error);

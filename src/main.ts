@@ -18,7 +18,7 @@ renderer.domElement.style.transformOrigin = "0 0";
 
 const N = 16,
   FLAP_W = 1.3,
-  SPEED = 12;
+  SPEED = 8;
 const cellH = FLAP_W * (100 / 70),
   gap = 0.14,
   stepX = FLAP_W + gap,
@@ -164,6 +164,8 @@ function getDisplayString(): string {
 }
 
 function setDisplayString(text: string): void {
+  rippleTimeouts.forEach(clearTimeout);
+  rippleTimeouts = [];
   const lines = text.split("\n");
   for (let r = 0; r < N; r++) {
     const line = lines[r] || "";
@@ -175,10 +177,49 @@ function setDisplayString(text: string): void {
   }
 }
 
+let rippleTimeouts: any[] = [];
+
 function enterIndeterminateState(): void {
-  for (const f of flaps) {
-    if (f.queueTarget !== "?" && (f.current !== " " || (f.queueTarget && f.queueTarget !== " "))) {
-      f.go("?");
+  rippleTimeouts.forEach(clearTimeout);
+  rippleTimeouts = [];
+
+  const nonEmptyFlaps = flaps.filter((f) => {
+    const cur = f.current;
+    const tgt = f.queueTarget;
+    return (cur !== " " && cur !== "?") || (tgt !== null && tgt !== " " && tgt !== "?");
+  });
+
+  const propagationDelay = 120; // ms per grid unit of distance
+
+  if (nonEmptyFlaps.length > 0) {
+    for (const f of flaps) {
+      let minDist = Infinity;
+      for (const orig of nonEmptyFlaps) {
+        const d = Math.hypot(f.row - orig.row, f.col - orig.col);
+        if (d < minDist) {
+          minDist = d;
+        }
+      }
+      const delay = minDist * propagationDelay;
+      const tid = setTimeout(() => {
+        if (f.queueTarget !== "?") {
+          f.go("?");
+        }
+      }, delay);
+      rippleTimeouts.push(tid);
+    }
+  } else {
+    const centerRow = (N - 1) / 2;
+    const centerCol = (N - 1) / 2;
+    for (const f of flaps) {
+      const d = Math.hypot(f.row - centerRow, f.col - centerCol);
+      const delay = d * propagationDelay;
+      const tid = setTimeout(() => {
+        if (f.queueTarget !== "?") {
+          f.go("?");
+        }
+      }, delay);
+      rippleTimeouts.push(tid);
     }
   }
 }
