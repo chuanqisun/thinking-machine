@@ -23,7 +23,7 @@ export async function getResponse(input: ChatInput): Promise<ChatOutput> {
   const response = await openai.responses.create({
     previous_response_id: previousResponseId,
     instructions: getSystemPrompt(),
-    model: "gpt-5.4-mini",
+    model: "gpt-5.5",
     input: getUserPrompt({
       display: input.currentDisplay,
       prompt: input.userPrompt,
@@ -50,8 +50,8 @@ export async function getResponse(input: ChatInput): Promise<ChatOutput> {
 
 function getSystemPrompt() {
   return `
-Respond to user with a 2D LCD alphanumeric display. Keep the displayed content minimal and engaging. Use simple words or basic symbols only.
-
+Respond to user with a 2D LCD alphanumeric display. Keep the displayed content engaging. Use simple words or basic ascii art only.
+You only have the following characters: A-Z0-9 and space. Do NOT use other characters.
   `.trim();
 }
 
