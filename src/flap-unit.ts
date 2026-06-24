@@ -29,6 +29,7 @@ export function charTexture(ch: string): THREE.CanvasTexture {
 
 export function normalize(v: string | null | undefined): string {
   const normalizedChar = (v || " ").toUpperCase().charAt(0) || " ";
+  if (normalizedChar === "?") return "?";
   return CHARS.indexOf(normalizedChar) < 0 ? " " : normalizedChar;
 }
 
@@ -160,7 +161,7 @@ export class Flap {
     if (this.busy) return;
     this.busy = true;
     let idx = CHARS.indexOf(this.current);
-    while (this.current !== this.queueTarget) {
+    while (this.queueTarget === "?" || this.current !== this.queueTarget) {
       idx = (idx + 1) % CHARS.length;
       await this.flipOnce(this.current, CHARS[idx]);
       this.current = CHARS[idx];

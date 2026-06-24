@@ -23,6 +23,7 @@ export async function getResponse(input: ChatInput): Promise<ChatOutput> {
   const response = await openai.responses.create({
     previous_response_id: previousResponseId,
     instructions: getSystemPrompt(),
+    model: "gpt-5.4-mini",
     input: getUserPrompt({
       display: input.currentDisplay,
       prompt: input.userPrompt,
@@ -51,17 +52,18 @@ function getSystemPrompt() {
   return `
 Respond to user with a 2D LCD alphanumeric display. Keep the displayed content minimal and engaging. Use simple words or basic symbols only.
 
-Respond in this valid JSON format
-{
-  "caption": "...", // a short phrase summarize what the displayed content is
-  "display": "...", // string that presents the displayed content. separate lines with "\\n"
-}
   `.trim();
 }
 
 function getUserPrompt(input: { display: string; prompt: string }) {
   return `
-${input.prompt}
-(Current display: "${JSON.stringify(input.display)}")
+Current display: "${JSON.stringify(input.display)}"
+My message: ${input.prompt}
+
+Respond to my message in this valid JSON format
+{
+  "caption": "...", // a short phrase summarize what the response
+  "display": "...", // a response to be displayed. separate lines with "\\n"
+}
   `.trim();
 }

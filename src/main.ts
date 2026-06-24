@@ -145,6 +145,44 @@ function startBoard(): void {
   }, 100);
 }
 
+/* ---------- Read/Write Display Abstraction ---------- */
+function getDisplayString(): string {
+  const lines: string[] = [];
+  for (let r = 0; r < N; r++) {
+    let line = "";
+    for (let c = 0; c < N; c++) {
+      const f = flaps[r * N + c];
+      if (f.queueTarget === "?") {
+        line += "?";
+      } else {
+        line += f.current;
+      }
+    }
+    lines.push(line);
+  }
+  return lines.join("\n");
+}
+
+function setDisplayString(text: string): void {
+  const lines = text.split("\n");
+  for (let r = 0; r < N; r++) {
+    const line = lines[r] || "";
+    for (let c = 0; c < N; c++) {
+      const char = line.charAt(c) || " ";
+      const f = flaps[r * N + c];
+      f.go(char);
+    }
+  }
+}
+
+function enterIndeterminateState(): void {
+  for (const f of flaps) {
+    if (f.queueTarget !== "?" && (f.current !== " " || (f.queueTarget && f.queueTarget !== " "))) {
+      f.go("?");
+    }
+  }
+}
+
 /* ---------- Initialize UI ---------- */
 initUI({
   onCalibrationChanged: () => {
@@ -153,6 +191,9 @@ initUI({
   onStartBoard: () => {
     startBoard();
   },
+  getDisplayString,
+  setDisplayString,
+  enterIndeterminateState,
 });
 
 /* ---------- Resize ---------- */

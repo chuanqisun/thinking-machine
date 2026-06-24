@@ -1,4 +1,5 @@
 import baseImgUrl from "./assets/base.webp";
+import { getResponse } from "./chat";
 
 export interface Point2D {
   x: number;
@@ -42,10 +43,22 @@ export const calibrationState = {
 
 let onCalibrationChangedCallback: (() => void) | null = null;
 let onStartBoardCallback: (() => void) | null = null;
+let getDisplayStringCallback: (() => string) | null = null;
+let setDisplayStringCallback: ((text: string) => void) | null = null;
+let enterIndeterminateStateCallback: (() => void) | null = null;
 
-export function initUI(options: { onCalibrationChanged: () => void; onStartBoard: () => void }): void {
+export function initUI(options: {
+  onCalibrationChanged: () => void;
+  onStartBoard: () => void;
+  getDisplayString: () => string;
+  setDisplayString: (text: string) => void;
+  enterIndeterminateState?: () => void;
+}): void {
   onCalibrationChangedCallback = options.onCalibrationChanged;
   onStartBoardCallback = options.onStartBoard;
+  getDisplayStringCallback = options.getDisplayString;
+  setDisplayStringCallback = options.setDisplayString;
+  enterIndeterminateStateCallback = options.enterIndeterminateState || null;
 
   loadBlend();
   buildBlendUI();
@@ -500,6 +513,56 @@ function setupEventListeners(): void {
   if (startBtnOverlay) {
     startBtnOverlay.addEventListener("click", () => {
       if (onStartBoardCallback) onStartBoardCallback();
+    });
+  }
+
+  const chatInput = document.getElementById("chat-input") as HTMLInputElement;
+  if (chatInput) {
+    chatInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        const userPrompt = chatInput.value.trim();
+        if (!userPrompt) return;
+
+        const apiKey = getOpenAiApiKey();
+        if (!apiKey) {
+          alert("Please enter your OpenAI API Key first.");
+          return;
+        }
+
+        const currentDisplay = getDisplayStringCallback ? getDisplayStringCallback() : "";
+
+        // Disable input during request
+        chatInput.disabled = true;
+        const originalPlaceholder = chatInput.placeholder;
+        chatInput.placeholder = "Thinking...";
+        chatInput.value = "";
+
+        if (enterIndeterminateStateCallback) {
+          enterIndeterminateStateCallback();
+        }
+
+        try {
+          const response = await getResponse({
+            apiKey,
+            userPrompt,
+            currentDisplay,
+            dimension: [16, 16],
+          });
+
+          console.log("AI Response:", response);
+
+          if (setDisplayStringCallback && response.display) {
+            setDisplayStringCallback(response.display);
+          }
+        } catch (error) {
+          console.error("Error getting AI response:", error);
+          alert("Error: " + (error instanceof Error ? error.message : error));
+        } finally {
+          chatInput.disabled = false;
+          chatInput.placeholder = originalPlaceholder;
+          chatInput.focus();
+        }
+      }
     });
   }
 }
