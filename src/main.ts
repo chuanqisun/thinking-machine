@@ -199,44 +199,92 @@ interface Ripple {
   cc: number;
   outer: number;
   inner: number;
-  releasing: boolean;
+  maxRadius: number;
+}
+
+interface TouchSession {
+  cr: number;
+  cc: number;
+  startTime: number;
+  lastEmitTime: number;
+  force: number;
 }
 
 let ripples: Ripple[] = [];
-let currentRipple: Ripple | null = null;
+let activeTouch: TouchSession | null = null;
+
 const EXPAND_SPEED = 11;
-const COLLAPSE_SPEED = 11;
+const RING_WIDTH = 1.5;
+const EMIT_INTERVAL = 150; // ms between ring emissions
+const MIN_FORCE = 3.0;
+const MAX_FORCE = 20.0;
+const FORCE_GROWTH_RATE = 15.0; // force increase per second
 const HOLD_PERIOD = Math.max(120, (1000 / SPEED) * 1.15);
 
-function createRipple(flap: Flap): void {
-  const r: Ripple = { cr: flap.row, cc: flap.col, outer: 0, inner: -1, releasing: false };
-  ripples.push(r);
-  currentRipple = r;
+function emitRing(row: number, col: number, maxRadius: number): void {
+  ripples.push({
+    cr: row,
+    cc: col,
+    outer: 0,
+    inner: -RING_WIDTH,
+    maxRadius,
+  });
+}
+
+function startTouch(flap: Flap): void {
+  const now = performance.now();
+  activeTouch = {
+    cr: flap.row,
+    cc: flap.col,
+    startTime: now,
+    lastEmitTime: now,
+    force: MIN_FORCE,
+  };
+  emitRing(flap.row, flap.col, MIN_FORCE);
   flap.rippleActive = true;
   flap.advance();
-  flap.nextAdvance = performance.now() + HOLD_PERIOD;
+  flap.nextAdvance = now + HOLD_PERIOD;
 }
-function moveRipple(flap: Flap | null): void {
-  if (currentRipple && !currentRipple.releasing && flap) {
-    currentRipple.cr = flap.row;
-    currentRipple.cc = flap.col;
+
+function moveTouch(flap: Flap | null): void {
+  if (activeTouch && flap) {
+    activeTouch.cr = flap.row;
+    activeTouch.cc = flap.col;
   }
 }
-function releaseRipple(): void {
-  if (currentRipple) {
-    currentRipple.releasing = true;
-    currentRipple.inner = 0;
-  }
-  currentRipple = null;
+
+function releaseTouch(): void {
+  activeTouch = null;
 }
 
 function updateRipples(now: number, dt: number): void {
-  for (const r of ripples) {
-    if (!r.releasing) r.outer += EXPAND_SPEED * dt;
-    else r.inner += COLLAPSE_SPEED * dt;
+  // Update current touch and emit new rings periodically
+  if (activeTouch) {
+    activeTouch.force = Math.min(MAX_FORCE, activeTouch.force + FORCE_GROWTH_RATE * dt);
+    const elapsedSinceEmit = now - activeTouch.lastEmitTime;
+    if (elapsedSinceEmit >= EMIT_INTERVAL) {
+      emitRing(activeTouch.cr, activeTouch.cc, activeTouch.force);
+      activeTouch.lastEmitTime = now;
+    }
   }
-  ripples = ripples.filter((r) => !(r.releasing && r.inner >= r.outer));
 
+  // Update existing ripples
+  for (const r of ripples) {
+    if (r.outer < r.maxRadius) {
+      r.outer += EXPAND_SPEED * dt;
+      if (r.outer > r.maxRadius) {
+        r.outer = r.maxRadius;
+      }
+    }
+    if (r.outer < r.maxRadius) {
+      r.inner = r.outer - RING_WIDTH;
+    } else {
+      r.inner += EXPAND_SPEED * dt;
+    }
+  }
+  ripples = ripples.filter((r) => r.inner < r.maxRadius);
+
+  // Apply activation to flaps
   for (const f of flaps) {
     let active = false;
     for (const r of ripples) {
@@ -286,7 +334,7 @@ window.addEventListener("pointerdown", (e) => {
   if (!boardGroup.visible) return;
   isPointerDown = true;
   const flap = getIntersectedFlap(e.clientX, e.clientY);
-  if (flap) createRipple(flap);
+  if (flap) startTouch(flap);
 });
 
 window.addEventListener("pointermove", (e) => {
@@ -303,16 +351,16 @@ window.addEventListener("pointermove", (e) => {
   }
   const flap = getIntersectedFlap(e.clientX, e.clientY);
   document.body.style.cursor = flap ? "pointer" : "default";
-  if (isPointerDown && currentRipple) moveRipple(flap);
+  if (isPointerDown && activeTouch) moveTouch(flap);
 });
 
 window.addEventListener("pointerup", () => {
   isPointerDown = false;
-  releaseRipple();
+  releaseTouch();
 });
 window.addEventListener("pointercancel", () => {
   isPointerDown = false;
-  releaseRipple();
+  releaseTouch();
 });
 window.addEventListener("contextmenu", (e) => e.preventDefault());
 
