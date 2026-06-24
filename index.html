@@ -135,6 +135,23 @@
       .preset-btn:active {
         transform: scale(0.97);
       }
+      .text-input {
+        background: #2a2a2a;
+        color: #e0e0e0;
+        border: 1px solid #444;
+        padding: 8px;
+        font-family: monospace;
+        font-size: 12px;
+        border-radius: 4px;
+        width: 100%;
+        box-sizing: border-box;
+        transition: all 0.15s ease;
+      }
+      .text-input:focus {
+        outline: none;
+        border-color: #00ff00;
+        color: #fff;
+      }
       .row {
         display: flex;
         gap: 8px;
@@ -261,6 +278,11 @@
         <div class="menu-section-title" style="margin-top: 6px">Lighting Blend</div>
         <div id="blend-controls" style="display: flex; flex-direction: column; gap: 8px"></div>
         <button class="preset-btn" id="btn-blend-reset">Reset Blend</button>
+
+        <div class="menu-section-title" style="margin-top: 6px">OpenAI API Key</div>
+        <div class="param-row">
+          <input type="password" id="openai-api-key" class="text-input" placeholder="Enter API Key" />
+        </div>
 
         <div class="menu-section-title" style="margin-top: 6px">Settings File</div>
         <div class="row">

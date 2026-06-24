@@ -50,6 +50,7 @@ export function initUI(options: { onCalibrationChanged: () => void; onStartBoard
   loadBlend();
   buildBlendUI();
   loadCalibration();
+  loadApiKey();
   setupEventListeners();
   updateHandlesUI();
   scheduleLightmap();
@@ -291,6 +292,17 @@ function loadCalibration(): void {
   }
 }
 
+function loadApiKey(): void {
+  const apiKeyInput = document.getElementById("openai-api-key") as HTMLInputElement;
+  if (apiKeyInput) {
+    apiKeyInput.value = localStorage.getItem("openaiApiKey") || "";
+  }
+}
+
+export function getOpenAiApiKey(): string {
+  return localStorage.getItem("openaiApiKey") || "";
+}
+
 export function updateHandlesUI(): void {
   const handlesContainer = document.getElementById("calibration-handles") as HTMLDivElement;
   const calibSvg = document.getElementById("calibration-svg") as unknown as SVGElement;
@@ -458,6 +470,13 @@ function setupEventListeners(): void {
   }
   if (btnImport && importFileInput) {
     btnImport.addEventListener("click", () => importFileInput.click());
+  }
+
+  const apiKeyInput = document.getElementById("openai-api-key") as HTMLInputElement;
+  if (apiKeyInput) {
+    apiKeyInput.addEventListener("input", () => {
+      localStorage.setItem("openaiApiKey", apiKeyInput.value);
+    });
   }
   if (importFileInput) {
     importFileInput.addEventListener("change", (e: Event) => {
