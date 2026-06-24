@@ -329,7 +329,7 @@ export function updateHandlesUI(): void {
     return;
   }
   handlesContainer.style.display = "block";
-  calibSvg.style.display = "block";
+  calibSvg.style.display = calibrationState.adjustMode ? "none" : "block";
   const poly: string[] = [];
   for (let i = 0; i < 4; i++) {
     const handle = document.getElementById(`handle-${i}`) as HTMLDivElement;
