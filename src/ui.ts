@@ -41,11 +41,33 @@ export const calibrationState = {
   adjustMode: false,
 };
 
+export const bezelState = {
+  color: "#383838",
+  opacity: 1.0,
+};
+
+function loadBezelSettings(): void {
+  try {
+    const savedColor = localStorage.getItem("splitFlapBezelColor");
+    if (savedColor) bezelState.color = savedColor;
+    const savedOpacity = localStorage.getItem("splitFlapBezelOpacity");
+    if (savedOpacity) bezelState.opacity = parseFloat(savedOpacity);
+  } catch (e) {}
+}
+
+export function saveBezelSettings(): void {
+  try {
+    localStorage.setItem("splitFlapBezelColor", bezelState.color);
+    localStorage.setItem("splitFlapBezelOpacity", bezelState.opacity.toString());
+  } catch (e) {}
+}
+
 let onCalibrationChangedCallback: (() => void) | null = null;
 let onStartBoardCallback: (() => void) | null = null;
 let getDisplayStringCallback: (() => string) | null = null;
 let setDisplayStringCallback: ((text: string) => void) | null = null;
 let enterIndeterminateStateCallback: (() => void) | null = null;
+let onBezelChangedCallback: ((color: string, opacity: number) => void) | null = null;
 
 export function initUI(options: {
   onCalibrationChanged: () => void;
@@ -53,13 +75,16 @@ export function initUI(options: {
   getDisplayString: () => string;
   setDisplayString: (text: string) => void;
   enterIndeterminateState?: () => void;
+  onBezelChanged?: (color: string, opacity: number) => void;
 }): void {
   onCalibrationChangedCallback = options.onCalibrationChanged;
   onStartBoardCallback = options.onStartBoard;
   getDisplayStringCallback = options.getDisplayString;
   setDisplayStringCallback = options.setDisplayString;
   enterIndeterminateStateCallback = options.enterIndeterminateState || null;
+  onBezelChangedCallback = options.onBezelChanged || null;
 
+  loadBezelSettings();
   loadBlend();
   buildBlendUI();
   loadCalibration();
@@ -67,6 +92,10 @@ export function initUI(options: {
   setupEventListeners();
   updateHandlesUI();
   scheduleLightmap();
+
+  if (onBezelChangedCallback) {
+    onBezelChangedCallback(bezelState.color, bezelState.opacity);
+  }
 }
 
 function loadBlend(): void {
@@ -565,6 +594,38 @@ function setupEventListeners(): void {
       }
     });
   }
+
+  const bezelColorInput = document.getElementById("bezel-color") as HTMLInputElement;
+  const bezelOpacityInput = document.getElementById("bezel-opacity") as HTMLInputElement;
+  const bezelOpacityVal = document.getElementById("bezel-opacity-val") as HTMLSpanElement;
+
+  if (bezelColorInput) {
+    bezelColorInput.value = bezelState.color;
+    bezelColorInput.addEventListener("input", () => {
+      bezelState.color = bezelColorInput.value;
+      saveBezelSettings();
+      if (onBezelChangedCallback) {
+        onBezelChangedCallback(bezelState.color, bezelState.opacity);
+      }
+    });
+  }
+
+  if (bezelOpacityInput) {
+    bezelOpacityInput.value = String(bezelState.opacity);
+    if (bezelOpacityVal) {
+      bezelOpacityVal.textContent = bezelState.opacity.toFixed(2);
+    }
+    bezelOpacityInput.addEventListener("input", () => {
+      bezelState.opacity = parseFloat(bezelOpacityInput.value);
+      if (bezelOpacityVal) {
+        bezelOpacityVal.textContent = bezelState.opacity.toFixed(2);
+      }
+      saveBezelSettings();
+      if (onBezelChangedCallback) {
+        onBezelChangedCallback(bezelState.color, bezelState.opacity);
+      }
+    });
+  }
 }
 
 /* ---------- Export / Import settings ---------- */
@@ -573,6 +634,8 @@ interface SettingsData {
   exportedAt: string;
   calibrationPoints: Point2D[];
   blendParams: Record<string, number>;
+  bezelColor?: string;
+  bezelOpacity?: number;
 }
 
 export function exportSettings(): void {
@@ -583,6 +646,8 @@ export function exportSettings(): void {
     exportedAt: new Date().toISOString(),
     calibrationPoints: calibrationState.points,
     blendParams: blend,
+    bezelColor: bezelState.color,
+    bezelOpacity: bezelState.opacity,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -601,6 +666,22 @@ export function importSettings(data: any): void {
       for (const k in data.blendParams) if (blendParams[k]) blendParams[k].value = +data.blendParams[k];
       syncBlendUI();
       saveBlend();
+    }
+    if (data.bezelColor !== undefined) {
+      bezelState.color = data.bezelColor;
+      const colInput = document.getElementById("bezel-color") as HTMLInputElement;
+      if (colInput) colInput.value = bezelState.color;
+    }
+    if (data.bezelOpacity !== undefined) {
+      bezelState.opacity = +data.bezelOpacity;
+      const opInput = document.getElementById("bezel-opacity") as HTMLInputElement;
+      const opVal = document.getElementById("bezel-opacity-val") as HTMLSpanElement;
+      if (opInput) opInput.value = String(bezelState.opacity);
+      if (opVal) opVal.textContent = bezelState.opacity.toFixed(2);
+    }
+    saveBezelSettings();
+    if (onBezelChangedCallback) {
+      onBezelChangedCallback(bezelState.color, bezelState.opacity);
     }
     if (Array.isArray(data.calibrationPoints) && data.calibrationPoints.length === 4) {
       calibrationState.points = data.calibrationPoints.map((p: any) => ({ x: +p.x, y: +p.y }));

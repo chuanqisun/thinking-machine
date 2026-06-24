@@ -36,10 +36,17 @@ const halfX = offX + (FLAP_W * 1.08) / 2,
 const BEZEL = FLAP_W;
 const outX = halfX + BEZEL,
   outY = halfY + BEZEL;
-const GAP_COLOR = 0x181818;
-const backPlate = new THREE.Mesh(new THREE.PlaneGeometry(outX * 2, outY * 2), new THREE.MeshBasicMaterial({ color: GAP_COLOR }));
-backPlate.position.z = -0.2;
-boardGroup.add(backPlate);
+const GAP_COLOR = 0x080808;
+const BEZEL_COLOR = 0x383838;
+
+const gapPlate = new THREE.Mesh(new THREE.PlaneGeometry(halfX * 2, halfY * 2), new THREE.MeshBasicMaterial({ color: GAP_COLOR }));
+gapPlate.position.z = -0.19;
+boardGroup.add(gapPlate);
+
+const bezelMaterial = new THREE.MeshBasicMaterial({ color: BEZEL_COLOR, transparent: true, opacity: 1.0 });
+const bezelPlate = new THREE.Mesh(new THREE.PlaneGeometry(outX * 2, outY * 2), bezelMaterial);
+bezelPlate.position.z = -0.2;
+boardGroup.add(bezelPlate);
 
 const flaps: Flap[] = [],
   raycastTargets: THREE.Object3D[] = [];
@@ -235,6 +242,10 @@ initUI({
   getDisplayString,
   setDisplayString,
   enterIndeterminateState,
+  onBezelChanged: (color: string, opacity: number) => {
+    bezelMaterial.color.set(color);
+    bezelMaterial.opacity = opacity;
+  },
 });
 
 /* ---------- Resize ---------- */
