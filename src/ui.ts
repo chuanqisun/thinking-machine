@@ -123,6 +123,69 @@ let dy = 0;
 let dw = 0;
 let dh = 0;
 
+export const defaultNormalizedPoints: Point2D[] = [
+  {
+    x: 0.1828989955357143,
+    y: 0.3242373511904762,
+  },
+  {
+    x: 0.7778083147321428,
+    y: 0.2832998511904762,
+  },
+  {
+    x: 0.774982173859127,
+    y: 0.623857886904762,
+  },
+  {
+    x: 0.23736219618055554,
+    y: 0.6994680059523809,
+  },
+];
+
+export let normalizedPoints: Point2D[] = [...defaultNormalizedPoints];
+
+export function isNormalized(points: Point2D[]): boolean {
+  return points && points.length === 4 && points.every((p) => p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
+}
+
+export function updateBackgroundRect(): void {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const w = bgImgW || 1920;
+  const h = bgImgH || 1080;
+  const imgAspect = w / h;
+  const winAspect = W / H;
+  if (imgAspect > winAspect) {
+    dw = W;
+    dh = W / imgAspect;
+  } else {
+    dh = H;
+    dw = H * imgAspect;
+  }
+  dx = (W - dw) / 2;
+  dy = (H - dh) / 2;
+}
+
+export function updateScreenPointsFromNormalized(): void {
+  updateBackgroundRect();
+  if (normalizedPoints.length === 4) {
+    calibrationState.points = normalizedPoints.map((p) => ({
+      x: dx + p.x * dw,
+      y: dy + p.y * dh,
+    }));
+  }
+}
+
+export function updateNormalizedFromScreenPoints(): void {
+  updateBackgroundRect();
+  if (calibrationState.points.length === 4) {
+    normalizedPoints = calibrationState.points.map((p) => ({
+      x: (p.x - dx) / dw,
+      y: (p.y - dy) / dh,
+    }));
+  }
+}
+
 const bgImage = new Image();
 bgImage.crossOrigin = "anonymous";
 bgImage.src = baseImgUrl;
@@ -130,6 +193,10 @@ bgImage.onload = () => {
   try {
     bgImgW = bgImage.naturalWidth;
     bgImgH = bgImage.naturalHeight;
+    updateBackgroundRect();
+    updateScreenPointsFromNormalized();
+    if (onCalibrationChangedCallback) onCalibrationChangedCallback();
+    updateHandlesUI();
     const oc = document.createElement("canvas");
     oc.width = bgImgW;
     oc.height = bgImgH;
@@ -326,11 +393,33 @@ function loadCalibration(): void {
   try {
     const saved = localStorage.getItem("splitFlapCalibrationPoints");
     if (saved) {
-      calibrationState.points = JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length === 4) {
+        if (isNormalized(parsed)) {
+          normalizedPoints = parsed;
+        } else {
+          // Legacy raw pixel coordinates. Convert them!
+          // Assume legacy reference of 1920x1080
+          normalizedPoints = parsed.map((p) => ({
+            x: p.x / 1920,
+            y: p.y / 1080,
+          }));
+        }
+        calibrationState.step = 4;
+      } else {
+        normalizedPoints = [...defaultNormalizedPoints];
+        calibrationState.step = 4;
+      }
+    } else {
+      normalizedPoints = [...defaultNormalizedPoints];
       calibrationState.step = 4;
     }
+    updateScreenPointsFromNormalized();
   } catch (e) {
     console.warn("Calibration load failed:", e);
+    normalizedPoints = [...defaultNormalizedPoints];
+    calibrationState.step = 4;
+    updateScreenPointsFromNormalized();
   }
 }
 
@@ -440,7 +529,8 @@ function setupEventListeners(): void {
       handle.releasePointerCapture(e.pointerId);
       handle.classList.remove("active");
       activeDrag = null;
-      localStorage.setItem("splitFlapCalibrationPoints", JSON.stringify(calibrationState.points));
+      updateNormalizedFromScreenPoints();
+      localStorage.setItem("splitFlapCalibrationPoints", JSON.stringify(normalizedPoints));
       buildLightmap();
     };
     handle.addEventListener("pointerup", stop);
@@ -451,6 +541,7 @@ function setupEventListeners(): void {
     startBtn.addEventListener("click", () => {
       setAdjustMode(false);
       calibrationState.points = [];
+      normalizedPoints = [];
       calibrationState.step = 0;
       calibrationState.handlesShown = true;
       if (onCalibrationChangedCallback) onCalibrationChangedCallback();
@@ -476,6 +567,8 @@ function setupEventListeners(): void {
       calibrationState.handlesShown = false;
       if (calibBanner) calibBanner.style.display = "none";
       doneBtn.style.display = "none";
+      updateNormalizedFromScreenPoints();
+      localStorage.setItem("splitFlapCalibrationPoints", JSON.stringify(normalizedPoints));
       updateHandlesUI();
       buildLightmap();
     });
@@ -485,6 +578,7 @@ function setupEventListeners(): void {
     btnCalibrateReset.addEventListener("click", () => {
       setAdjustMode(false);
       calibrationState.points = [];
+      normalizedPoints = [];
       calibrationState.step = -1;
       calibrationState.handlesShown = false;
       if (calibBanner) calibBanner.style.display = "none";
@@ -644,7 +738,7 @@ export function exportSettings(): void {
   const data: SettingsData = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    calibrationPoints: calibrationState.points,
+    calibrationPoints: normalizedPoints,
     blendParams: blend,
     bezelColor: bezelState.color,
     bezelOpacity: bezelState.opacity,
@@ -684,14 +778,25 @@ export function importSettings(data: any): void {
       onBezelChangedCallback(bezelState.color, bezelState.opacity);
     }
     if (Array.isArray(data.calibrationPoints) && data.calibrationPoints.length === 4) {
-      calibrationState.points = data.calibrationPoints.map((p: any) => ({ x: +p.x, y: +p.y }));
+      if (isNormalized(data.calibrationPoints)) {
+        normalizedPoints = data.calibrationPoints.map((p: any) => ({ x: +p.x, y: +p.y }));
+      } else {
+        // Legacy file being imported, convert to normalized based on current screen size
+        updateBackgroundRect();
+        normalizedPoints = data.calibrationPoints.map((p: any) => ({
+          x: (+p.x - dx) / dw,
+          y: (+p.y - dy) / dh,
+        }));
+      }
       calibrationState.step = 4;
       setAdjustMode(false);
-      localStorage.setItem("splitFlapCalibrationPoints", JSON.stringify(calibrationState.points));
+      localStorage.setItem("splitFlapCalibrationPoints", JSON.stringify(normalizedPoints));
+      updateScreenPointsFromNormalized();
       if (onCalibrationChangedCallback) onCalibrationChangedCallback();
       updateHandlesUI();
     } else if (data.calibrationPoints && data.calibrationPoints.length === 0) {
       calibrationState.points = [];
+      normalizedPoints = [];
       calibrationState.step = -1;
       localStorage.removeItem("splitFlapCalibrationPoints");
       if (onCalibrationChangedCallback) onCalibrationChangedCallback();

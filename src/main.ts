@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { Flap } from "./flap-unit";
 import { resumeAudio } from "./sound";
 import "./style.css";
-import { type Point2D, calibrationState, initUI, scheduleLightmap, updateHandlesUI } from "./ui";
+import { type Point2D, calibrationState, initUI, scheduleLightmap, updateHandlesUI, updateScreenPointsFromNormalized, updateNormalizedFromScreenPoints, normalizedPoints } from "./ui";
 
 /* ---------- Scene ---------- */
 const scene = new THREE.Scene();
@@ -323,6 +323,7 @@ function resize(): void {
   camera.top = vh / 2;
   camera.bottom = -vh / 2;
   camera.updateProjectionMatrix();
+  updateScreenPointsFromNormalized();
   applyCalibration();
   updateHandlesUI();
 }
@@ -481,8 +482,9 @@ window.addEventListener("pointerdown", (e) => {
     } else {
       if (calibMsg) calibMsg.textContent = "Calibration complete! Drag corners to adjust";
       if (doneBtn) doneBtn.style.display = "block";
+      updateNormalizedFromScreenPoints();
       applyCalibration();
-      localStorage.setItem("splitFlapCalibrationPoints", JSON.stringify(calibrationState.points));
+      localStorage.setItem("splitFlapCalibrationPoints", JSON.stringify(normalizedPoints));
     }
     return;
   }
