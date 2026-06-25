@@ -18,15 +18,15 @@ export interface BlendParam {
 }
 
 export const blendParams: Record<string, BlendParam> = {
-  lightStrength: { label: "Light Strength", min: 0, max: 1, step: 0.01, value: 0.63, def: 0.63 },
-  exposure: { label: "Exposure", min: -1, max: 1, step: 0.01, value: 0.4, def: 0.4 },
-  contrast: { label: "Contrast", min: 0.3, max: 2.5, step: 0.01, value: 1.87, def: 1.87 },
+  lightStrength: { label: "Light Strength", min: 0, max: 1, step: 0.01, value: 0.42, def: 0.42 },
+  exposure: { label: "Exposure", min: -1, max: 1, step: 0.01, value: -1, def: -1 },
+  contrast: { label: "Contrast", min: 0.3, max: 2.5, step: 0.01, value: 0.76, def: 0.76 },
   black: { label: "Black Level", min: 0, max: 0.6, step: 0.01, value: 0, def: 0 },
-  white: { label: "White Level", min: 0.4, max: 1.5, step: 0.01, value: 0.55, def: 0.55 },
-  gamma: { label: "Gamma", min: 0.2, max: 3, step: 0.01, value: 0.86, def: 0.86 },
+  white: { label: "White Level", min: 0.4, max: 1.5, step: 0.01, value: 0.65, def: 0.65 },
+  gamma: { label: "Gamma", min: 0.2, max: 3, step: 0.01, value: 0.2, def: 0.2 },
   tint: { label: "Color Tint", min: 0, max: 1, step: 0.01, value: 0, def: 0 },
   saturation: { label: "Tint Saturation", min: 0, max: 2, step: 0.01, value: 0, def: 0 },
-  softness: { label: "Falloff Softness", min: 0, max: 1, step: 0.01, value: 0.38, def: 0.38 },
+  softness: { label: "Falloff Softness", min: 0, max: 1, step: 0.01, value: 0.98, def: 0.98 },
 };
 
 export const calibrationState = {
@@ -42,8 +42,8 @@ export const calibrationState = {
 };
 
 export const bezelState = {
-  color: "#383838",
-  opacity: 1.0,
+  color: "#000000",
+  opacity: 0.7,
 };
 
 function loadBezelSettings(): void {

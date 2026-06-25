@@ -46,13 +46,13 @@ const BEZEL = FLAP_W;
 const outX = halfX + BEZEL,
   outY = halfY + BEZEL;
 const GAP_COLOR = 0x080808;
-const BEZEL_COLOR = 0x383838;
+const BEZEL_COLOR = 0x000000;
 
 const gapPlate = new THREE.Mesh(new THREE.PlaneGeometry(halfX * 2, halfY * 2), new THREE.MeshBasicMaterial({ color: GAP_COLOR }));
 gapPlate.position.z = -0.19;
 boardGroup.add(gapPlate);
 
-const bezelMaterial = new THREE.MeshBasicMaterial({ color: BEZEL_COLOR, transparent: true, opacity: 1.0 });
+const bezelMaterial = new THREE.MeshBasicMaterial({ color: BEZEL_COLOR, transparent: true, opacity: 0.7 });
 const bezelPlate = new THREE.Mesh(new THREE.PlaneGeometry(outX * 2, outY * 2), bezelMaterial);
 bezelPlate.position.z = -0.2;
 boardGroup.add(bezelPlate);
