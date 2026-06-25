@@ -2,7 +2,16 @@ import * as THREE from "three";
 import { Flap } from "./flap-unit";
 import { resumeAudio } from "./sound";
 import "./style.css";
-import { type Point2D, calibrationState, initUI, scheduleLightmap, updateHandlesUI, updateScreenPointsFromNormalized, updateNormalizedFromScreenPoints, normalizedPoints } from "./ui";
+import {
+  type Point2D,
+  calibrationState,
+  initUI,
+  normalizedPoints,
+  scheduleLightmap,
+  updateHandlesUI,
+  updateNormalizedFromScreenPoints,
+  updateScreenPointsFromNormalized,
+} from "./ui";
 
 /* ---------- Scene ---------- */
 const scene = new THREE.Scene();

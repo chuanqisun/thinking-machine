@@ -84,6 +84,11 @@ export function initUI(options: {
   enterIndeterminateStateCallback = options.enterIndeterminateState || null;
   onBezelChangedCallback = options.onBezelChanged || null;
 
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("debug") === "true") {
+    document.body.classList.add("debug-mode");
+  }
+
   loadBezelSettings();
   loadBlend();
   buildBlendUI();
@@ -640,52 +645,67 @@ function setupEventListeners(): void {
   }
 
   const chatInput = document.getElementById("chat-input") as HTMLInputElement;
+  const chatSendBtn = document.getElementById("btn-chat-send") as HTMLButtonElement;
+
+  async function submitMessage() {
+    if (!chatInput) return;
+    const userPrompt = chatInput.value.trim();
+    if (!userPrompt) return;
+
+    const apiKey = getOpenAiApiKey();
+    if (!apiKey) {
+      alert("Please enter your OpenAI API Key first.");
+      return;
+    }
+
+    const currentDisplay = getDisplayStringCallback ? getDisplayStringCallback() : "";
+
+    // Disable input during request
+    chatInput.disabled = true;
+    if (chatSendBtn) chatSendBtn.disabled = true;
+    const originalPlaceholder = chatInput.placeholder;
+    chatInput.placeholder = "Thinking...";
+    chatInput.value = "";
+
+    if (enterIndeterminateStateCallback) {
+      enterIndeterminateStateCallback();
+    }
+
+    try {
+      const response = await getResponse({
+        apiKey,
+        userPrompt,
+        currentDisplay,
+        dimension: [16, 16],
+      });
+
+      console.log("AI Response:", response);
+
+      if (setDisplayStringCallback && response.displayResponse) {
+        setDisplayStringCallback(response.displayResponse);
+      }
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      alert("Error: " + (error instanceof Error ? error.message : error));
+    } finally {
+      chatInput.disabled = false;
+      if (chatSendBtn) chatSendBtn.disabled = false;
+      chatInput.placeholder = originalPlaceholder;
+      chatInput.focus();
+    }
+  }
+
   if (chatInput) {
     chatInput.addEventListener("keydown", async (e) => {
       if (e.key === "Enter") {
-        const userPrompt = chatInput.value.trim();
-        if (!userPrompt) return;
-
-        const apiKey = getOpenAiApiKey();
-        if (!apiKey) {
-          alert("Please enter your OpenAI API Key first.");
-          return;
-        }
-
-        const currentDisplay = getDisplayStringCallback ? getDisplayStringCallback() : "";
-
-        // Disable input during request
-        chatInput.disabled = true;
-        const originalPlaceholder = chatInput.placeholder;
-        chatInput.placeholder = "Thinking...";
-        chatInput.value = "";
-
-        if (enterIndeterminateStateCallback) {
-          enterIndeterminateStateCallback();
-        }
-
-        try {
-          const response = await getResponse({
-            apiKey,
-            userPrompt,
-            currentDisplay,
-            dimension: [16, 16],
-          });
-
-          console.log("AI Response:", response);
-
-          if (setDisplayStringCallback && response.displayResponse) {
-            setDisplayStringCallback(response.displayResponse);
-          }
-        } catch (error) {
-          console.error("Error getting AI response:", error);
-          alert("Error: " + (error instanceof Error ? error.message : error));
-        } finally {
-          chatInput.disabled = false;
-          chatInput.placeholder = originalPlaceholder;
-          chatInput.focus();
-        }
+        await submitMessage();
       }
+    });
+  }
+
+  if (chatSendBtn) {
+    chatSendBtn.addEventListener("click", async () => {
+      await submitMessage();
     });
   }
 
