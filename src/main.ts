@@ -147,8 +147,21 @@ function startBoard(): void {
     overlay.style.pointerEvents = "none";
     setTimeout(() => (overlay.style.display = "none"), 400);
   }
+
+  const word = "HELLO";
+  const startRow = Math.floor((N - 1) / 2);
+  const startCol = Math.floor((N - word.length) / 2);
+
   setTimeout(() => {
-    flaps.forEach((f, i) => setTimeout(() => f.go(" "), (Math.floor(i / N) + (i % N)) * 80));
+    flaps.forEach((f, i) => {
+      const r = Math.floor(i / N);
+      const c = i % N;
+      let targetChar = " ";
+      if (r === startRow && c >= startCol && c < startCol + word.length) {
+        targetChar = word.charAt(c - startCol);
+      }
+      setTimeout(() => f.go(targetChar), (r + c) * 80);
+    });
   }, 100);
 }
 
@@ -170,10 +183,61 @@ function getDisplayString(): string {
   return lines.join("\n");
 }
 
+function centerTextInGrid(text: string, size: number): string {
+  const lines = text.split("\n");
+
+  // Trim leading empty/blank lines
+  let firstLine = 0;
+  while (firstLine < lines.length && lines[firstLine].trim() === "") {
+    firstLine++;
+  }
+
+  // Trim trailing empty/blank lines
+  let lastLine = lines.length - 1;
+  while (lastLine >= firstLine && lines[lastLine].trim() === "") {
+    lastLine--;
+  }
+
+  if (firstLine > lastLine) {
+    return Array(size).fill(" ".repeat(size)).join("\n");
+  }
+
+  const contentLines = lines.slice(firstLine, lastLine + 1);
+  const numLines = Math.min(contentLines.length, size);
+  const verticalSlice = contentLines.slice(0, numLines);
+
+  const centeredLines = verticalSlice.map((line) => {
+    const trimmed = line.trim();
+    if (trimmed.length >= size) {
+      return trimmed.slice(0, size);
+    }
+    const leftPad = Math.floor((size - trimmed.length) / 2);
+    const rightPad = size - trimmed.length - leftPad;
+    return " ".repeat(leftPad) + trimmed + " ".repeat(rightPad);
+  });
+
+  const topPad = Math.floor((size - numLines) / 2);
+  const bottomPad = size - numLines - topPad;
+
+  const resultLines: string[] = [];
+  for (let i = 0; i < topPad; i++) {
+    resultLines.push(" ".repeat(size));
+  }
+  for (const line of centeredLines) {
+    resultLines.push(line);
+  }
+  for (let i = 0; i < bottomPad; i++) {
+    resultLines.push(" ".repeat(size));
+  }
+
+  return resultLines.join("\n");
+}
+
 function setDisplayString(text: string): void {
   rippleTimeouts.forEach(clearTimeout);
   rippleTimeouts = [];
-  const lines = text.split("\n");
+  const centeredText = centerTextInGrid(text, N);
+  const lines = centeredText.split("\n");
   for (let r = 0; r < N; r++) {
     const line = lines[r] || "";
     for (let c = 0; c < N; c++) {
